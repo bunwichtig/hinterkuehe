@@ -3,8 +3,7 @@ import { VERSION } from './config/ids';
 import { DEFAULT_SETTINGS, cleanSettings, rulesFor } from './config/settings';
 import { storage } from './config/storage';
 import { Game } from './game/game';
-import { generateTerrain } from './game/terrain';
-import { drawScene } from './ui/render';
+import { BattlefieldView } from './ui/scene3d';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
@@ -18,28 +17,24 @@ for (const key of ['name', 'room'] as const) {
   input.addEventListener('change', () => storage.set(key, input.value.trim()));
 }
 
-/** Vorschau: eine Runde mit zwei Teams aufbauen und das Feld zeichnen. */
-function renderPreview(seed: number): void {
-  const canvas = $<HTMLCanvasElement>('#preview');
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
+let view: BattlefieldView | null = null;
+try {
+  view = new BattlefieldView($('#battlefield'));
+} catch {
+  $('#battlefield').textContent = 'Dein Browser kann leider kein 3D (WebGL) anzeigen.';
+}
+
+/** Vorschau: ein Gefecht mit zwei Höfen aufbauen und das Schlachtfeld zeigen. */
+function showPreview(seed: number): void {
+  if (!view) return;
   const settings = cleanSettings(storage.getJson('settings') ?? DEFAULT_SETTINGS);
   const game = new Game();
   game.addPlayer('a', 0);
   game.addPlayer('b', 1);
   game.startMatch(rulesFor(settings, 2), seed);
-  const snap = game.snapshot();
-  const color = new Map(snap.teams.map((t) => [t.index, t.color]));
-  drawScene(
-    ctx,
-    game.terrain ?? generateTerrain(seed),
-    snap.cows.map(([, team, x, y, , facing]) => ({ x, y, color: color.get(team) ?? '#fff', facing })),
-  );
+  view.show(game.terrain!, game.snapshot());
 }
 
-let seed = Math.floor(Math.random() * 2 ** 31);
-renderPreview(seed);
-$('#btn-reroll').addEventListener('click', () => {
-  seed = Math.floor(Math.random() * 2 ** 31);
-  renderPreview(seed);
-});
+const newSeed = () => Math.floor(Math.random() * 2 ** 31);
+showPreview(newSeed());
+$('#btn-reroll').addEventListener('click', () => showPreview(newSeed()));

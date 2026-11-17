@@ -1,9 +1,9 @@
 # Hinterkühe
 
-Rundenbasiertes Artillerie-Taktikspiel im Browser: Teams aus Kühen verteidigen ihre Weide mit Heuballen, Milchkannen und Kuhglocken. Online mit Freunden, ohne Installation und ohne eigenen Server.
+Rundenbasiertes 3D-Taktikspiel im Browser: Höfe schicken ihre Kühe auf die Hinterweide. Pro Zug eine Kuh wählen, mit der Ausdauer laufen, dann schießen, werfen, heilen oder Minen legen. Kühe sammeln Erfahrung und werden in vier Laufbahnen befördert. Online mit Freunden, ohne Installation und ohne eigenen Server.
 
 - **Spielkonzept:** [docs/konzept.md](docs/konzept.md)
-- **Stand:** Gerüst (Version 0.1.0). Online-Verbindung und spielbarer Prototyp folgen.
+- **Stand:** Gerüst mit 3D-Vorschau (Version 0.2.0). Online-Verbindung und spielbarer Prototyp folgen.
 
 ## Loslegen
 
@@ -24,8 +24,8 @@ Zum Testen mehrerer Spieler auf einem Rechner (sobald die Verbindung steht): `ht
 |---|---|
 | `src/config/` | Kennungen (`ids.ts`), Einstellungen (`settings.ts`), Browser-Speicher |
 | `src/net/` | Raumname und Passwort-Hash, Nachrichten-Protokoll, Transport-Schnittstellen |
-| `src/game/` | Spiellogik (läuft nur beim Host): Zugablauf, Gelände, Zufall |
-| `src/ui/` | Zeichnen auf Canvas |
+| `src/game/` | Spiellogik (läuft nur beim Host): Zugablauf, Laufbahnen, Waffen, Gelände, Zufall |
+| `src/ui/` | 3D-Darstellung mit Three.js |
 | `tests/` | Tests mit Vitest |
 
 Technik nach der Vorlage *spiel-technik-und-optionen.md*: PeerJS (WebRTC) mit autoritativem Host, Einstellungen über `DEFAULT_SETTINGS → cleanSettings → rulesFor → rules`.

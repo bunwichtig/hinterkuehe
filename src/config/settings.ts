@@ -16,30 +16,34 @@
 
 export const MODES = ['klassisch', 'individuell'] as const;
 export const WIND_LEVELS = ['aus', 'leicht', 'normal', 'stark'] as const;
-export const MAPS = ['zufall', 'alm', 'kornfeld', 'steinbruch', 'gletscher'] as const;
+export const MAPS = ['zufall', 'alm', 'moor', 'kornfeld', 'steinbruch', 'winterweide'] as const;
+export const BUNKER_LEVELS = ['keine', 'wenige', 'normal', 'viele'] as const;
 export const CRATE_LEVELS = ['aus', 'wenig', 'normal', 'viel'] as const;
-export const WEAPON_SETS = ['standard', 'nur-wurf', 'chaos'] as const;
 
 export type Mode = (typeof MODES)[number];
 export type WindLevel = (typeof WIND_LEVELS)[number];
 export type MapName = (typeof MAPS)[number];
 export type CrateLevel = (typeof CRATE_LEVELS)[number];
-export type WeaponSet = (typeof WEAPON_SETS)[number];
+export type BunkerLevel = (typeof BUNKER_LEVELS)[number];
 
 export interface Settings {
   mode: Mode;
-  /** Kühe pro Team. */
+  /** Kühe pro Hof. */
   teamSize: number;
-  /** Lebenspunkte jeder Kuh zu Rundenbeginn. */
+  /** Lebenspunkte eines Jungrinds zu Rundenbeginn. */
   hp: number;
   /** Zugzeit in Sekunden. */
   turnTime: number;
-  /** Rückzugszeit nach dem Schuss in Sekunden. */
-  retreatTime: number;
+  /** Ausdauer pro Zug in Prozent des Grundwerts der Laufbahn. */
+  stamina: number;
   wind: WindLevel;
   map: MapName;
+  bunkers: BunkerLevel;
   crates: CrateLevel;
-  weapons: WeaponSet;
+  /** Kühe sammeln Erfahrung und werden befördert. */
+  promotion: boolean;
+  /** Rang, mit dem alle Kühe starten (1 = Jungrind). */
+  startRank: number;
   fallDamage: boolean;
   /** Minuten bis zum Hochwasser (Sudden Death), 0 = aus. */
   floodAfter: number;
@@ -49,23 +53,26 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   mode: 'klassisch',
   teamSize: 4,
   hp: 100,
-  turnTime: 45,
-  retreatTime: 3,
+  turnTime: 60,
+  stamina: 100,
   wind: 'normal',
   map: 'zufall',
+  bunkers: 'normal',
   crates: 'normal',
-  weapons: 'standard',
+  promotion: true,
+  startRank: 1,
   fallDamage: true,
-  floodAfter: 15,
+  floodAfter: 20,
 });
 
 /** Grenzen und Schrittweiten der Zahlenwerte. */
 export const LIMITS = {
-  teamSize: { min: 1, max: 6, step: 1 },
+  teamSize: { min: 2, max: 6, step: 1 },
   hp: { min: 50, max: 200, step: 25 },
-  turnTime: { min: 15, max: 90, step: 5 },
-  retreatTime: { min: 0, max: 10, step: 1 },
-  floodAfter: { min: 0, max: 30, step: 5 },
+  turnTime: { min: 30, max: 120, step: 10 },
+  stamina: { min: 50, max: 200, step: 25 },
+  startRank: { min: 1, max: 4, step: 1 },
+  floodAfter: { min: 0, max: 40, step: 5 },
 } as const;
 
 type NumKey = keyof typeof LIMITS;
@@ -98,11 +105,13 @@ export function cleanSettings(input: unknown): Settings {
     teamSize: num('teamSize', o.teamSize),
     hp: num('hp', o.hp),
     turnTime: num('turnTime', o.turnTime),
-    retreatTime: num('retreatTime', o.retreatTime),
+    stamina: num('stamina', o.stamina),
     wind: pick(WIND_LEVELS, o.wind, d.wind),
     map: pick(MAPS, o.map, d.map),
+    bunkers: pick(BUNKER_LEVELS, o.bunkers, d.bunkers),
     crates: pick(CRATE_LEVELS, o.crates, d.crates),
-    weapons: pick(WEAPON_SETS, o.weapons, d.weapons),
+    promotion: bool(o.promotion, d.promotion),
+    startRank: num('startRank', o.startRank),
     fallDamage: bool(o.fallDamage, d.fallDamage),
     floodAfter: num('floodAfter', o.floodAfter),
   };
@@ -113,30 +122,37 @@ export interface Rules {
   cowsPerTeam: number;
   hp: number;
   turnMs: number;
-  retreatMs: number;
-  /** Höchster Windbetrag (Pixel/s² auf das Geschoss), 0 = kein Wind. */
+  /** Faktor auf die Grund-Ausdauer der Laufbahn (1 = 100 %). */
+  staminaFactor: number;
+  /** Höchste Windbeschleunigung in m/s² auf Bogengeschosse, 0 = kein Wind. */
   windMax: number;
   map: Exclude<MapName, 'zufall'>;
+  /** Bunker pro Hof auf der Karte. */
+  bunkersPerTeam: number;
   /** Wahrscheinlichkeit pro Zug, dass eine Kiste abgeworfen wird. */
   crateChance: number;
-  weapons: WeaponSet;
+  promotion: boolean;
+  startRank: number;
   fallDamage: boolean;
   floodAfterMs: number;
 }
 
-const WIND_MAX: Record<WindLevel, number> = { aus: 0, leicht: 40, normal: 80, stark: 140 };
+const WIND_MAX: Record<WindLevel, number> = { aus: 0, leicht: 1.5, normal: 3, stark: 5 };
+const BUNKERS: Record<BunkerLevel, number> = { keine: 0, wenige: 1, normal: 2, viele: 3 };
 const CRATE_CHANCE: Record<CrateLevel, number> = { aus: 0, wenig: 0.15, normal: 0.3, viel: 0.6 };
 
 /** Werte, die der Modus „Klassisch“ fest vorgibt. */
 export const CLASSIC: Readonly<Partial<Settings>> = Object.freeze({
   hp: 100,
-  turnTime: 45,
-  retreatTime: 3,
+  turnTime: 60,
+  stamina: 100,
   wind: 'normal',
+  bunkers: 'normal',
   crates: 'normal',
-  weapons: 'standard',
+  promotion: true,
+  startRank: 1,
   fallDamage: true,
-  floodAfter: 15,
+  floodAfter: 20,
 });
 
 /**
@@ -152,17 +168,19 @@ export function rulesFor(
 ): Rules {
   const s: Settings = input.mode === 'klassisch' ? { ...input, ...CLASSIC } : input;
   const realMaps = MAPS.filter((m): m is Exclude<MapName, 'zufall'> => m !== 'zufall');
-  // Bei vielen Teams nicht mehr als 16 Kühe auf dem Feld.
-  const maxPerTeam = Math.max(1, Math.floor(16 / Math.max(1, teamCount)));
+  // Bei vielen Höfen nicht mehr als 16 Kühe auf dem Feld.
+  const maxPerTeam = Math.max(2, Math.floor(16 / Math.max(1, teamCount)));
   return {
     cowsPerTeam: Math.min(s.teamSize, maxPerTeam),
     hp: s.hp,
     turnMs: s.turnTime * 1000,
-    retreatMs: s.retreatTime * 1000,
+    staminaFactor: s.stamina / 100,
     windMax: WIND_MAX[s.wind],
     map: s.map === 'zufall' ? pickMap(realMaps) : s.map,
+    bunkersPerTeam: BUNKERS[s.bunkers],
     crateChance: CRATE_CHANCE[s.crates],
-    weapons: s.weapons,
+    promotion: s.promotion,
+    startRank: s.startRank,
     fallDamage: s.fallDamage,
     floodAfterMs: s.floodAfter * 60_000,
   };
