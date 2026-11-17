@@ -1,0 +1,100 @@
+:root {
+  --bg: #1d2b1f;
+  --panel: #27392a;
+  --text: #f3efe0;
+  --muted: #b9c4a8;
+  --accent: #f2a541;
+  --sky-top: #8ec9e8;
+  --sky-bottom: #d9eef7;
+  --grass: #5c9d3b;
+  --soil: #7a5233;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+#app {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(2rem, 6vw, 3.25rem);
+  letter-spacing: 0.02em;
+}
+
+.tagline,
+.hint,
+.ver {
+  color: var(--muted);
+}
+
+.panel {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  margin: 16px 0;
+  background: var(--panel);
+  border-radius: 12px;
+}
+
+label {
+  display: grid;
+  gap: 4px;
+}
+
+input {
+  padding: 8px 10px;
+  border: 1px solid #44593f;
+  border-radius: 8px;
+  background: #1a251b;
+  color: var(--text);
+  font: inherit;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+button {
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #1d1a10;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 8px 0 12px;
+  border-radius: 12px;
+}
+
+.ver {
+  margin-top: 24px;
+  font-size: 0.85rem;
+}
