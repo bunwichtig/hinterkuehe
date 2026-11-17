@@ -4,14 +4,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Hinterkühe</title>
-    <meta name="description" content="Rundenbasiertes Artillerie-Taktikspiel mit Kühen – online in Teams." />
+    <meta name="description" content="Rundenbasiertes 3D-Taktikspiel mit Kühen – online in Teams." />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐄</text></svg>" />
   </head>
   <body>
     <main id="app">
       <section id="screen-start" class="screen">
         <h1>Hinterkühe</h1>
-        <p class="tagline">Rundenbasierte Weidekriege. Zielen, Wind lesen, Heuballen fliegen lassen.</p>
+        <p class="tagline">Rundenbasierte 3D-Taktik um die Hinterweide. Kuh wählen, anschleichen, Wind lesen, Heuballen fliegen lassen. Kühe werden befördert.</p>
         <form id="start-form" class="panel" autocomplete="off">
           <label>Dein Name <input name="name" maxlength="24" required /></label>
           <label>Raum <input name="room" maxlength="24" required /></label>
@@ -20,10 +20,10 @@
             <button type="button" id="btn-host" disabled title="Kommt mit der Verbindung (Schritt 2)">Raum erstellen</button>
             <button type="button" id="btn-join" disabled title="Kommt mit der Verbindung (Schritt 2)">Beitreten</button>
           </div>
-          <p class="hint">Online-Verbindung folgt im nächsten Schritt. Unten siehst du eine Vorschau einer erzeugten Weide.</p>
+          <p class="hint">Online-Verbindung folgt im nächsten Schritt. Unten siehst du eine Vorschau eines erzeugten Schlachtfelds (mit der Maus oder dem Finger drehen).</p>
         </form>
-        <canvas id="preview" width="1600" height="800" aria-label="Vorschau einer zufälligen Karte"></canvas>
-        <button type="button" id="btn-reroll">Neue Weide würfeln</button>
+        <div id="battlefield" aria-label="3D-Vorschau eines zufälligen Schlachtfelds"></div>
+        <button type="button" id="btn-reroll">Neues Schlachtfeld würfeln</button>
       </section>
       <p class="ver">Version <span id="ver"></span> <span class="build">· __VERSION__</span></p>
     </main>

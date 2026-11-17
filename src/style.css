@@ -4,10 +4,6 @@
   --text: #f3efe0;
   --muted: #b9c4a8;
   --accent: #f2a541;
-  --sky-top: #8ec9e8;
-  --sky-bottom: #d9eef7;
-  --grass: #5c9d3b;
-  --soil: #7a5233;
   color-scheme: dark;
 }
 
@@ -86,12 +82,17 @@ button:disabled {
   cursor: not-allowed;
 }
 
-canvas {
-  display: block;
-  width: 100%;
-  height: auto;
+#battlefield {
   margin: 8px 0 12px;
   border-radius: 12px;
+  overflow: hidden;
+  min-height: 200px;
+  touch-action: none;
+}
+
+#battlefield canvas {
+  display: block;
+  width: 100%;
 }
 
 .ver {
