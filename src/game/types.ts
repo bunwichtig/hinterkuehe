@@ -66,7 +66,7 @@ export interface Snapshot {
   craters: [number, number, number, number][];
   bunkers: [x: number, z: number, facing: number, material: 'holz' | 'stein', hp: number][];
   teams: { index: number; name: string; color: string }[];
-  /** id, Hof, x, y, z, Blickrichtung, LP, max. LP, Laufbahn, Rang, Ausdauer, schon dran */
-  cows: [string, number, number, number, number, number, number, number, Career, number, number, boolean][];
+  /** id, Hof, x, y, z, Blickrichtung, LP, max. LP, Laufbahn, Rang, Ausdauer, schon dran, Name, wählt Laufbahn */
+  cows: [string, number, number, number, number, number, number, number, Career, number, number, boolean, string, boolean][];
   msg: string;
 }

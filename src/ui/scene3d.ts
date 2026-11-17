@@ -15,6 +15,12 @@ export class BattlefieldView {
   readonly controls: OrbitControls;
   private world = new THREE.Group();
   private raf = 0;
+  private cowMeshes = new Map<string, { obj: THREE.Group; rank: number; target: THREE.Vector3; heading: number }>();
+  private marker: THREE.Mesh;
+  private terrain: Terrain | null = null;
+  private shownKey = '';
+  private follow: string | null = null;
+  private observer = new ResizeObserver(() => this.resize());
 
   constructor(private host: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -45,7 +51,13 @@ export class BattlefieldView {
     Object.assign(sun.shadow.camera, { left: -70, right: 70, top: 70, bottom: -70, far: 300 });
     this.scene.add(hemi, sun, sun.target);
 
-    new ResizeObserver(() => this.resize()).observe(host);
+    // Ring über der aktiven Kuh.
+    this.marker = new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.12, 6, 18), new THREE.MeshBasicMaterial({ color: '#ffe066' }));
+    this.marker.rotation.x = Math.PI / 2;
+    this.marker.visible = false;
+    this.scene.add(this.marker);
+
+    this.observer.observe(host);
     this.resize();
     this.loop();
   }
@@ -53,6 +65,9 @@ export class BattlefieldView {
   /** Baut die ganze Szene aus Gelände und Schnappschuss neu auf. */
   show(t: Terrain, snap: Snapshot): void {
     this.world.clear();
+    this.cowMeshes.clear();
+    this.terrain = t;
+    this.shownKey = `${snap.mapSeed}:${snap.round}`;
     const span = (t.size - 1) * t.cell;
     const center = new THREE.Vector3(span / 2, 0, span / 2);
 
@@ -76,11 +91,12 @@ export class BattlefieldView {
       this.world.add(b);
     }
     const colors = new Map(snap.teams.map((tm) => [tm.index, tm.color]));
-    for (const [, team, x, y, z, heading, , , , rank] of snap.cows) {
+    for (const [id, team, x, y, z, heading, , , , rank] of snap.cows) {
       const c = cow(colors.get(team) ?? '#ffffff', rank);
       c.position.set(x, y, z);
       c.rotation.y = (heading * Math.PI) / 180;
       this.world.add(c);
+      this.cowMeshes.set(id, { obj: c, rank, target: c.position.clone(), heading });
     }
 
     this.controls.target.copy(center).setY(2);
@@ -90,8 +106,92 @@ export class BattlefieldView {
     this.controls.update();
   }
 
+  /**
+   * Spielstand anzeigen. Neue Runde → Szene neu aufbauen (Gelände aus dem Seed),
+   * sonst nur Kühe bewegen. Gezeichnet wird nur aus dem Schnappschuss, beim Host wie beim Mitspieler.
+   */
+  update(snap: Snapshot, makeTerrain: (seed: number) => Terrain): void {
+    const key = `${snap.mapSeed}:${snap.round}`;
+    if (key !== this.shownKey || !this.terrain) {
+      this.show(makeTerrain(snap.mapSeed), snap);
+      this.controls.autoRotate = false;
+    }
+    const colors = new Map(snap.teams.map((tm) => [tm.index, tm.color]));
+    const alive = new Set<string>();
+    for (const [id, team, x, y, z, heading, , , , rank] of snap.cows) {
+      alive.add(id);
+      let m = this.cowMeshes.get(id);
+      if (m && m.rank !== rank) {
+        this.world.remove(m.obj);
+        m = undefined;
+      }
+      if (!m) {
+        const obj = cow(colors.get(team) ?? '#ffffff', rank);
+        obj.position.set(x, y, z);
+        this.world.add(obj);
+        m = { obj, rank, target: obj.position.clone(), heading };
+        this.cowMeshes.set(id, m);
+      }
+      m.target.set(x, y, z);
+      m.heading = heading;
+    }
+    for (const [id, m] of this.cowMeshes) {
+      if (!alive.has(id)) {
+        this.world.remove(m.obj);
+        this.cowMeshes.delete(id);
+      }
+    }
+    this.follow = snap.activeCow;
+  }
+
+  /** Die Ansicht in einen anderen Platz der Seite hängen (Startseite ↔ Spiel). */
+  moveTo(el: HTMLElement): void {
+    if (el === this.host) return;
+    this.observer.unobserve(this.host);
+    this.host = el;
+    el.append(this.renderer.domElement);
+    this.observer.observe(el);
+    this.resize();
+  }
+
+  /** Kamera-Vorwärtsrichtung auf dem Boden (x, z), für Laufen relativ zur Kamera. */
+  groundForward(): [number, number] {
+    const d = new THREE.Vector3();
+    this.camera.getWorldDirection(d);
+    const len = Math.hypot(d.x, d.z) || 1;
+    return [d.x / len, d.z / len];
+  }
+
+  /** Grafikqualität pro Gerät: Schatten und Auflösung. */
+  setQuality(q: 'niedrig' | 'mittel' | 'hoch'): void {
+    this.renderer.shadowMap.enabled = q !== 'niedrig';
+    this.renderer.setPixelRatio(q === 'hoch' ? Math.min(2, window.devicePixelRatio) : 1);
+    this.resize();
+  }
+
+  private animate(): void {
+    // Glättung wie in der Vorlage: pro Bild 35 % zur echten Position, große Sprünge direkt.
+    for (const m of this.cowMeshes.values()) {
+      const p = m.obj.position;
+      if (p.distanceTo(m.target) > 6) p.copy(m.target);
+      else p.lerp(m.target, 0.35);
+      m.obj.rotation.y = (m.heading * Math.PI) / 180;
+    }
+    const active = this.follow ? this.cowMeshes.get(this.follow) : undefined;
+    this.marker.visible = !!active;
+    if (active) {
+      const p = active.obj.position;
+      this.marker.position.set(p.x, p.y + 3.2 + Math.sin(performance.now() / 250) * 0.15, p.z);
+      // Kamera folgt der aktiven Kuh, Blickwinkel bleibt beim Spieler.
+      const shift = p.clone().setY(p.y + 1).sub(this.controls.target).multiplyScalar(0.08);
+      this.controls.target.add(shift);
+      this.camera.position.add(shift);
+    }
+  }
+
   private resize(): void {
     const w = this.host.clientWidth;
+    if (w === 0) return; // versteckt
     const h = Math.round(w * (window.innerWidth < 700 ? 0.9 : 0.56));
     this.renderer.setSize(w, h);
     this.camera.aspect = w / h;
@@ -100,6 +200,7 @@ export class BattlefieldView {
 
   private loop = () => {
     this.raf = requestAnimationFrame(this.loop);
+    this.animate();
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
   };

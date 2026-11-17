@@ -9,22 +9,106 @@
   </head>
   <body>
     <main id="app">
+      <!-- ───────────── Startseite ───────────── -->
       <section id="screen-start" class="screen">
         <h1>Hinterkühe</h1>
         <p class="tagline">Rundenbasierte 3D-Taktik um die Hinterweide. Kuh wählen, anschleichen, Wind lesen, Heuballen fliegen lassen. Kühe werden befördert.</p>
         <form id="start-form" class="panel" autocomplete="off">
-          <label>Dein Name <input name="name" maxlength="24" required /></label>
-          <label>Raum <input name="room" maxlength="24" required /></label>
-          <label>Passwort <input name="pw" type="password" maxlength="40" /></label>
+          <label>Dein Name <span class="with-dice"><input name="name" maxlength="16" required /><button type="button" class="dice" data-dice="name" title="Vorschlag würfeln">🎲</button></span></label>
+          <label>Raum <span class="with-dice"><input name="room" maxlength="24" required /><button type="button" class="dice" data-dice="room" title="Vorschlag würfeln">🎲</button></span></label>
+          <label>Passwort (leer = offen für alle, die den Raumnamen kennen) <span class="with-dice"><input name="pw" maxlength="40" /><button type="button" class="dice" data-dice="pw" title="Passwort würfeln">🎲</button></span></label>
           <div class="row">
-            <button type="button" id="btn-host" disabled title="Kommt mit der Verbindung (Schritt 2)">Raum erstellen</button>
-            <button type="button" id="btn-join" disabled title="Kommt mit der Verbindung (Schritt 2)">Beitreten</button>
+            <button type="submit" id="btn-host">Raum erstellen</button>
+            <button type="button" id="btn-join">Beitreten</button>
           </div>
-          <p class="hint">Online-Verbindung folgt im nächsten Schritt. Unten siehst du eine Vorschau eines erzeugten Schlachtfelds (mit der Maus oder dem Finger drehen).</p>
+          <p id="start-error" class="error" role="alert"></p>
+          <p id="local-hint" class="hint" hidden>Lokaler Testmodus (<code>?local</code>): Mehrere Tabs dieses Browsers spielen miteinander, ohne Internet.</p>
         </form>
-        <div id="battlefield" aria-label="3D-Vorschau eines zufälligen Schlachtfelds"></div>
+        <details class="panel tech">
+          <summary>Wie funktioniert die Verbindung?</summary>
+          <p>Es gibt keinen Spielserver. Wer den Raum erstellt, ist Gastgeber: Sein Browser rechnet das Spiel, die anderen schicken nur ihre Befehle. Die Browser verbinden sich direkt (WebRTC über PeerJS), ein Vermittlungsserver hilft nur beim ersten Kontakt.</p>
+          <p>Das Passwort wird nie im Klartext verschickt, nur als SHA-256-Fingerabdruck. Im Einladungslink steht alles hinter dem <code>#</code>, und dieser Teil geht nie an einen Server.</p>
+        </details>
+        <div id="battlefield-start" class="view-slot"></div>
         <button type="button" id="btn-reroll">Neues Schlachtfeld würfeln</button>
       </section>
+
+      <!-- ───────────── Lobby ───────────── -->
+      <section id="screen-lobby" class="screen" hidden>
+        <header class="bar">
+          <h2 id="lobby-title">Lobby</h2>
+          <button type="button" class="ghost" data-leave>Verlassen</button>
+        </header>
+        <div class="panel invite">
+          <label>Einladungslink <input id="invite-link" readonly /></label>
+          <div class="row">
+            <button type="button" id="btn-copy">Kopieren</button>
+            <button type="button" id="btn-share" hidden>Teilen</button>
+            <label class="check"><input type="checkbox" id="invite-pw" checked /> Passwort mitschicken</label>
+          </div>
+        </div>
+        <div id="teams" class="teams"></div>
+        <div class="lobby-grid">
+          <div class="panel">
+            <h3>Einstellungen</h3>
+            <div id="settings-slot-lobby"></div>
+            <div class="row">
+              <button type="button" id="btn-start" hidden>Spiel starten</button>
+            </div>
+            <p id="lobby-msg" class="hint"></p>
+          </div>
+          <div id="chat-slot-lobby"></div>
+        </div>
+      </section>
+
+      <!-- ───────────── Spiel ───────────── -->
+      <section id="screen-game" class="screen" hidden>
+        <header class="bar">
+          <div id="hud-top" class="hud-top"></div>
+          <button type="button" class="ghost" data-leave>Verlassen</button>
+        </header>
+        <div class="stage">
+          <div id="battlefield-game" class="view-slot"></div>
+          <div id="overlay" class="overlay"></div>
+        </div>
+        <div id="turn-panel" class="panel turn"></div>
+        <div class="lobby-grid">
+          <div class="panel">
+            <h3>Höfe</h3>
+            <div id="score"></div>
+            <details id="game-settings">
+              <summary>Einstellungen</summary>
+              <div id="settings-slot-game"></div>
+            </details>
+            <details>
+              <summary>Dieses Gerät</summary>
+              <form id="device-form" class="settings">
+                <label><span>Grafik</span><select name="quality"><option value="niedrig">Niedrig (ohne Schatten)</option><option value="mittel">Mittel</option><option value="hoch">Hoch</option></select></label>
+                <label><span>Kamera-Empfindlichkeit</span><select name="cam"><option value="0.5">Langsam</option><option value="1">Normal</option><option value="1.6">Schnell</option></select></label>
+              </form>
+            </details>
+            <div class="row">
+              <button type="button" id="btn-lobby" class="ghost" hidden>Zur Lobby</button>
+            </div>
+            <p class="hint">Steuerung: Kuh wählen, dann laufen mit W A S D oder den Pfeilen (relativ zur Kamera). Kamera drehen mit der Maus oder einem Finger. Enter beendet den Zug.</p>
+          </div>
+          <div id="chat-slot-game"></div>
+        </div>
+      </section>
+
+      <div id="chat" class="panel chat">
+        <h3>Chat</h3>
+        <ol id="chat-log" aria-live="polite"></ol>
+        <form id="chat-form" class="row">
+          <input name="text" maxlength="200" placeholder="Nachricht" autocomplete="off" />
+          <button type="submit">Senden</button>
+        </form>
+        <form id="name-form" class="row">
+          <input name="name" maxlength="16" placeholder="Neuer Name" autocomplete="off" />
+          <button type="submit" class="ghost">Umbenennen</button>
+        </form>
+      </div>
+
       <p class="ver">Version <span id="ver"></span> <span class="build">· __VERSION__</span></p>
     </main>
     <script type="module" src="/src/main.ts"></script>

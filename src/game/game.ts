@@ -353,6 +353,8 @@ export class Game {
           c.rank,
           Math.round(c.stamina),
           c.used,
+          c.name,
+          c.needsBranch,
         ]),
       msg: this.msg,
     };
