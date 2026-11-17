@@ -202,6 +202,17 @@ Ablauf nach der Technik-Vorlage (`spiel-technik-und-optionen.md`, Kap. 4 und 13)
 4. **Im Spiel:** Chat bleibt offen. Wer später kommt, schaut zu und spielt ab der nächsten Runde mit.
 5. **Ende:** Geht der Host, ist der Raum für alle zu.
 
+**Umsetzung (0.3.0):**
+
+| Teil | Datei | Was |
+|---|---|---|
+| Protokoll | `src/net/protocol.ts` | Nachrichten mit Feld `t`, Prüfung aller Mitspieler-Nachrichten (`parseClientMessage`) |
+| Host | `src/net/host.ts` | nimmt Beitritte an (Passwort-Hash, Version, max. 8 Spieler, 10 s Zeitlimit), Lobby, Hofwahl, Chat, rechnet das Spiel mit 60 Hz, schickt den Spielstand höchstens 20-mal pro Sekunde und nur bei Änderung |
+| Mitspieler | `src/net/client.ts` | schickt Befehle, wiederholt die Laufrichtung alle 250 ms, zeigt nur an, was der Host schickt |
+| Transport | `src/net/peer.ts`, `src/net/local.ts` | PeerJS (Kennung `hinterkuehe-v1-<raum>`, 15 s Zeitlimit) und `?local` über BroadcastChannel |
+
+**Züge:** Befehle (`select`, `branch`, `fire`, `end`) tragen einen Zähler und wirken nur einmal. Laufen ist ein Zustand (Richtung in Weltkoordinaten, relativ zur Kamera berechnet). Nur der Spieler, der den Zug steuert (`ctrl`), wird gehört. Mehrere Spieler eines Hofs wechseln sich ab. Ein Hof ohne anwesende Spieler wird übersprungen; bleibt nur ein besetzter Hof übrig, geht es zurück in die Lobby.
+
 **Datenmenge:** Weil das Spiel rundenbasiert ist, schickt der Host Positionen nur, solange sich etwas bewegt (Kuh läuft, Geschoss fliegt), sonst nur bei Änderungen. Die Karte geht als Seed plus Kraterliste über das Netz, nicht als Höhenkarte.
 
 ## 12. Einstellungen
@@ -284,8 +295,8 @@ docs/         dieses Konzept
 
 ## 16. Fahrplan
 
-1. **Gerüst und Konzept** (dieser Stand): Laufbahnen, Waffenliste und Beförderung als Daten mit Tests, Zugablauf mit freier Kuhwahl, 3D-Kartenvorschau.
-2. **Verbindung und Einstellungen:** PeerJS und `?local`, Räume mit Passwort, Lobby mit Höfen, Chat, Einstellungsformular. Grundlage: `spiel-technik-und-optionen.md`.
+1. **Gerüst und Konzept** (erledigt, 0.2.0): Laufbahnen, Waffenliste und Beförderung als Daten mit Tests, Zugablauf mit freier Kuhwahl, 3D-Kartenvorschau.
+2. **Verbindung und Einstellungen** (erledigt, 0.3.0): PeerJS und `?local`, Räume mit Passwort, Einladungslink, Lobby mit Höfen, Chat, Einstellungsformular, Züge über den Host. Grundlage: `spiel-technik-und-optionen.md`. Details in Kap. 11.
 3. **Spielbarer Prototyp für 2 Spieler:** Kuh wählen, laufen mit Ausdauer, zielen, Milchkanne und Heuballen-Schleuder, Krater, Schaden, Rundenende. Auch am selben Gerät spielbar.
 4. **Laufbahnen im Spiel:** Erfahrung, Beförderung, alle Waffen, Bunker.
 5. **Ausbau:** Kisten, Hochwasser, Kartenthemen, Ton, Handy-Steuerung, Rangliste.
