@@ -53,6 +53,8 @@ export interface Bunker {
 export interface Snapshot {
   phase: Phase;
   round: number;
+  /** Zugzähler, steigt mit jedem neuen Zug. */
+  turn: number;
   activeTeam: number;
   activeCow: string | null;
   /** Restzeit des Zugs in ganzen Sekunden. */

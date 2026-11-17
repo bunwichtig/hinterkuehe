@@ -37,6 +37,10 @@ export class Game {
   cows: Cow[] = [];
   bunkers: Bunker[] = [];
   activeTeam = -1;
+  /** Zählt die Züge über alle Runden; ändert sich bei jedem neuen Zug. */
+  turn = 0;
+  /** Hof, der die letzte Runde gewonnen hat (null = Unentschieden oder noch keine). */
+  winner: number | null = null;
   activeCow: string | null = null;
   timeLeftMs = 0;
   wind: [number, number] = [0, 0];
@@ -61,6 +65,11 @@ export class Game {
     for (const team of this.teams) team.players = team.players.filter((p) => p !== id);
   }
 
+  /** Spieler-ID → Hof, für die nächste Runde. */
+  get playerTeams(): ReadonlyMap<string, number> {
+    return this.players;
+  }
+
   get playerCount(): number {
     return this.players.size;
   }
@@ -79,6 +88,7 @@ export class Game {
     this.terrain = generateTerrain(seed);
     this.craters = [];
     this.round += 1;
+    this.winner = null;
 
     this.teams = used.map((index) => ({
       index,
@@ -126,6 +136,17 @@ export class Game {
 
     this.activeTeam = this.teams[randInt(this.rng, 0, this.teams.length - 1)]!.index;
     this.beginTurn();
+  }
+
+  /** Zurück in die Lobby: Runde abbrechen, Spieler bleiben eingetragen. */
+  toLobby(): void {
+    this.phase = 'lobby';
+    this.activeCow = null;
+    this.activeTeam = -1;
+    this.cows = [];
+    this.bunkers = [];
+    this.teams = [];
+    this.msg = '';
   }
 
   /** Kühe, die der Hof am Zug jetzt wählen darf. */
@@ -235,6 +256,7 @@ export class Game {
     if (alive.length <= 1) {
       this.phase = 'roundEnd';
       this.activeCow = null;
+      this.winner = alive.length === 1 ? alive[0]!.index : null;
       this.msg = alive.length === 1 ? `${alive[0]!.name} gewinnt die Runde` : 'Unentschieden';
       for (const c of this.cows) if (c.alive) this.addXp(c.id, XP.survivedRound);
       return;
@@ -250,6 +272,7 @@ export class Game {
     }
     this.activeCow = null;
     this.actedThisTurn = false;
+    this.turn += 1;
     this.phase = 'select';
     this.timeLeftMs = this.rules!.turnMs;
     const angle = this.rng() * Math.PI * 2;
@@ -306,6 +329,7 @@ export class Game {
     return {
       phase: this.phase,
       round: this.round,
+      turn: this.turn,
       activeTeam: this.activeTeam,
       activeCow: this.activeCow,
       timeLeft: Math.ceil(Math.max(0, this.timeLeftMs) / 1000),
