@@ -45,6 +45,11 @@ export interface HostOptions {
   onSettings?: (s: Settings) => void;
   /** Zufall für Seeds und Spieler-IDs; in Tests fest. */
   random?: () => number;
+  /**
+   * „Am selben Gerät“: so viele Höfe (2–4) spielen abwechselnd an diesem Gerät.
+   * Für jeden weiteren Hof wird ein lokaler Spieler ohne Verbindung angelegt.
+   */
+  hotseat?: number;
 }
 
 interface Member extends LobbyPlayer {
@@ -81,6 +86,12 @@ export class HostSession extends Session implements HostControls {
     this.me = HOST_ID;
     this.members.set(HOST_ID, this.member(HOST_ID, null, cleanName(opts.name), 0, false));
     this.game.addPlayer(HOST_ID, 0);
+    const seats = Math.max(0, Math.min(MAX_TEAMS, Math.round(opts.hotseat ?? 0)));
+    for (let t = 1; t < seats; t++) {
+      const id = `lokal${t}`;
+      this.members.set(id, this.member(id, null, `Spieler ${t + 1}`, t, false));
+      this.game.addPlayer(id, t);
+    }
 
     this.t.onConnect((c) => this.pending.set(c, 0));
     this.t.onMessage((c, raw) => this.onMessage(c, raw));
@@ -128,8 +139,27 @@ export class HostSession extends Session implements HostControls {
     this.t.close();
   }
 
+  /** Spielen mehrere Höfe an diesem Gerät? */
+  get hotseat(): boolean {
+    return [...this.members.keys()].some((id) => id.startsWith('lokal'));
+  }
+
+  /** Am selben Gerät steuert man auch die Züge der lokalen Mitspieler. */
+  override get myTurn(): boolean {
+    const c = this.state?.ctrl;
+    return !!c && (c === this.me || this.isLocal(c));
+  }
+
+  private isLocal(id: string): boolean {
+    const m = this.members.get(id);
+    return !!m && m.connId === null && id !== HOST_ID;
+  }
+
   protected post(msg: ClientMessage): void {
-    this.handle(HOST_ID, msg);
+    // Spielbefehle gehören dem lokalen Spieler, der gerade am Zug ist.
+    const play = msg.t === 'cmd' || msg.t === 'walk' || msg.t === 'aim';
+    const actor = play && this.controller && this.isLocal(this.controller) ? this.controller : HOST_ID;
+    this.handle(actor, msg);
   }
 
   // ───────────────────────── Zeit ─────────────────────────
@@ -310,6 +340,9 @@ export class HostSession extends Session implements HostControls {
       case 'walk':
         if (this.controller === id) m.walk = msg.dir;
         return;
+      case 'aim':
+        if (this.controller === id) this.game.setAim(msg.yaw, msg.pitch, msg.weapon);
+        return;
       case 'cmd':
         if (msg.seq <= m.lastSeq) return; // schon ausgeführt
         m.lastSeq = msg.seq;
@@ -331,8 +364,10 @@ export class HostSession extends Session implements HostControls {
         if (g.cow(cmd.cow)?.team === g.activeTeam) g.chooseBranch(cmd.cow, cmd.branch);
         break;
       case 'fire':
-        // Prototyp: Aktion zählt, Geschossflug folgt in Schritt 3.
-        g.act();
+        g.fire(cmd);
+        break;
+      case 'jump':
+        g.jump();
         break;
       case 'end':
         if (g.phase === 'select' || g.phase === 'move') g.endTurn();

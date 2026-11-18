@@ -359,3 +359,101 @@ describe('Sonderfälle', () => {
     expect(host.game.phase).toBe('lobby');
   });
 });
+
+describe('Kampf über das Netz', () => {
+  async function myTurnAsGuest() {
+    const s = setup({ turnTime: 60 });
+    const g = s.join('Gustav');
+    await g.c.joined;
+    s.host.startGame();
+    if (s.host.state!.ctrl !== g.c.me) s.host.command({ k: 'end' });
+    const id = g.c.state!.s.cows.find((k) => k[1] === g.c.state!.s.activeTeam && !k[11])![0];
+    g.c.command({ k: 'select', cow: id });
+    return { ...s, ...g, id };
+  }
+
+  it('Mitspieler wirft, alle sehen das Geschoss und danach den Krater', async () => {
+    const { host, c, id } = await myTurnAsGuest();
+    expect(c.state!.s.arsenal.map(([w]) => w)).toContain('milchkanne');
+    c.command({ k: 'fire', weapon: 'milchkanne', aim: 90, pitch: 40, power: 0.5, fuse: 2 });
+    run(host, 200);
+    expect(host.game.phase).toBe('resolve');
+    expect(c.state!.s.proj).toHaveLength(1);
+    expect(c.state!.s.fx.some((f) => f[1] === 'shot')).toBe(true);
+    run(host, 2500);
+    expect(c.state!.s.proj).toHaveLength(0);
+    expect(c.state!.s.craters.length).toBeGreaterThan(0);
+    expect(c.state!.s.fx.some((f) => f[1] === 'boom')).toBe(true);
+    expect(host.game.cow(id)!.ammo.milchkanne).toBe(1);
+    run(host, 2000);
+    expect(host.state!.ctrl).toBe(HOST_ID); // nächster Hof
+  });
+
+  it('Zuschauer sehen, wohin gezielt wird; Fremde können nicht zielen', async () => {
+    const { host, c } = await myTurnAsGuest();
+    host.aim(45, 30, 'milchkanne', 0);
+    run(host, 100);
+    expect(c.state!.s.aim).toBeNull();
+    c.aim(120, 25, 'milchkanne', 0);
+    run(host, 100);
+    expect(c.state!.s.aim).toEqual([120, 25, 'milchkanne']);
+    // gedrosselt: innerhalb von 100 ms kein neues Zielen
+    c.aim(130, 25, 'milchkanne', 50);
+    run(host, 100);
+    expect(c.state!.s.aim![0]).toBe(120);
+  });
+
+  it('Sprung über das Netz kostet Ausdauer', async () => {
+    const { host, c, id } = await myTurnAsGuest();
+    const st = host.game.cow(id)!.stamina;
+    c.command({ k: 'jump' });
+    expect(host.game.cow(id)!.airborne).toBe(true);
+    run(host, 1500);
+    expect(host.game.cow(id)!.stamina).toBe(st - 10);
+  });
+
+  it('ungültige Feuerbefehle werden verworfen', async () => {
+    const { host, c, t } = await myTurnAsGuest();
+    t.raw({ t: 'cmd', seq: 99, cmd: { k: 'fire', weapon: 'heuhagel', aim: 0, pitch: 0, power: 1 } });
+    t.raw({ t: 'cmd', seq: 100, cmd: { k: 'fire', weapon: 'milchkanne', aim: 'x', pitch: 0, power: 1 } });
+    run(host, 100);
+    expect(host.game.phase).toBe('move');
+    expect(c.state!.s.acted).toBe(false);
+  });
+});
+
+describe('Am selben Gerät', () => {
+  function hotseat(seats: number) {
+    const net = memoryNetwork();
+    return new HostSession({
+      name: 'Hanna',
+      roomName: 'hier',
+      pwHash: '',
+      settings: { ...DEFAULT_SETTINGS, teamSize: 2 },
+      transport: net.host,
+      random: seeded(3),
+      hotseat: seats,
+    });
+  }
+
+  it('legt lokale Spieler für jeden Hof an', () => {
+    const h = hotseat(3);
+    expect(h.hotseat).toBe(true);
+    expect(h.lobby!.players.map((p) => p.team)).toEqual([0, 1, 2]);
+    expect(h.startGame()).toBeNull();
+  });
+
+  it('das Gerät steuert jeden Hof, Befehle wirken für den Spieler am Zug', () => {
+    const h = hotseat(2);
+    h.startGame();
+    for (let i = 0; i < 4; i++) {
+      expect(h.myTurn).toBe(true);
+      const team = h.state!.s.activeTeam;
+      const cow = h.state!.s.cows.find((k) => k[1] === team && !k[11])![0];
+      h.command({ k: 'select', cow });
+      expect(h.state!.s.activeCow).toBe(cow);
+      h.command({ k: 'end' });
+      expect(h.state!.s.activeTeam).not.toBe(team);
+    }
+  });
+});

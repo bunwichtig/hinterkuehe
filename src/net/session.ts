@@ -28,6 +28,8 @@ export abstract class Session {
 
   private seq = 0;
   private lastWalk: [number, number] = [0, 0];
+  private lastAim = '';
+  private lastAimAt = -Infinity;
   private listeners: { [K in keyof SessionEvents]: SessionEvents[K][] } = { change: [], chat: [], closed: [] };
 
   on<K extends keyof SessionEvents>(event: K, cb: SessionEvents[K]): () => void {
@@ -60,6 +62,20 @@ export abstract class Session {
   /** Letzte Laufrichtung erneut schicken (Mitspieler: alle 250 ms). */
   protected repeatWalk(): void {
     this.post({ t: 'walk', dir: this.lastWalk });
+  }
+
+  /**
+   * Zielen mitteilen (nur Anzeige für die anderen). Höchstens alle 100 ms und nur bei Änderung.
+   * @param now  Zeit in ms (für Tests von außen)
+   */
+  aim(yaw: number, pitch: number, weapon: string, now = Date.now()): void {
+    const y = Math.round(yaw / 2) * 2;
+    const p = Math.round(pitch);
+    const key = `${y}|${p}|${weapon}`;
+    if (key === this.lastAim || now - this.lastAimAt < 100) return;
+    this.lastAim = key;
+    this.lastAimAt = now;
+    this.post({ t: 'aim', yaw: y, pitch: p, weapon });
   }
 
   setTeam(team: number): void {
