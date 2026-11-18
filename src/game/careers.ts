@@ -60,7 +60,7 @@ export const CAREERS: Record<Career, CareerInfo> = {
     titles: ['Jungrind', 'Melkerin', 'Hofärztin', 'Kräuterkundige'],
     stamina: 110,
     hpBonus: 0,
-    unlocks: [BASE, ['melkschemel', 'heilkraeuter'], ['kraeuterdampf'], []],
+    unlocks: [BASE, ['melkschemel', 'heilkraeuter'], ['kraeuterdampf'], ['wiederbeleben']],
   },
   schleichen: {
     label: 'Schleichen',

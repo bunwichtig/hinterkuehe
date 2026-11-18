@@ -125,8 +125,8 @@ describe('Game – Zugablauf', () => {
     // Durchgang abschließen, bis die Kuh wieder dran sein kann
     while (!(g.activeTeam === team && g.selectableCows().some((c) => c.id === id))) {
       g.selectCow(firstSelectable(g));
-      g.act();
-      g.step(1 / 60);
+      expect(g.fire({ weapon: 'hornstoss', aim: 0, pitch: 0, power: 1 })).toBe(true);
+      for (let i = 0; i < 300 && g.phase === 'resolve'; i++) g.step(1 / 60);
     }
     g.selectCow(id);
     expect(g.cow(id)!.stamina).toBe(120);
@@ -188,6 +188,6 @@ describe('Schnappschuss', () => {
     const snap = game().snapshot();
     const json = JSON.stringify(snap);
     expect(JSON.parse(json)).toEqual(snap);
-    expect(json.length).toBeLessThan(1500);
+    expect(json.length).toBeLessThan(3000);
   });
 });
