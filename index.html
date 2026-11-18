@@ -22,6 +22,10 @@
             <button type="button" id="btn-join">Beitreten</button>
           </div>
           <p id="start-error" class="error" role="alert"></p>
+          <div class="row hotseat">
+            <label class="inline">Am selben Gerät mit <select id="hotseat-teams"><option value="2">2 Höfen</option><option value="3">3 Höfen</option><option value="4">4 Höfen</option></select></label>
+            <button type="button" id="btn-hotseat" class="ghost">Hier zusammen spielen</button>
+          </div>
           <p id="local-hint" class="hint" hidden>Lokaler Testmodus (<code>?local</code>): Mehrere Tabs dieses Browsers spielen miteinander, ohne Internet.</p>
         </form>
         <details class="panel tech">
@@ -39,7 +43,7 @@
           <h2 id="lobby-title">Lobby</h2>
           <button type="button" class="ghost" data-leave>Verlassen</button>
         </header>
-        <div class="panel invite">
+        <div class="panel invite" id="invite-panel">
           <label>Einladungslink <input id="invite-link" readonly /></label>
           <div class="row">
             <button type="button" id="btn-copy">Kopieren</button>
@@ -85,12 +89,26 @@
               <form id="device-form" class="settings">
                 <label><span>Grafik</span><select name="quality"><option value="niedrig">Niedrig (ohne Schatten)</option><option value="mittel">Mittel</option><option value="hoch">Hoch</option></select></label>
                 <label><span>Kamera-Empfindlichkeit</span><select name="cam"><option value="0.5">Langsam</option><option value="1">Normal</option><option value="1.6">Schnell</option></select></label>
+                <label><span>Ton</span><select name="sound"><option value="0">Aus</option><option value="0.35">Leise</option><option value="0.7">Normal</option><option value="1">Laut</option></select></label>
               </form>
             </details>
             <div class="row">
               <button type="button" id="btn-lobby" class="ghost" hidden>Zur Lobby</button>
             </div>
-            <p class="hint">Steuerung: Kuh wählen, dann laufen mit W A S D oder den Pfeilen (relativ zur Kamera). Kamera drehen mit der Maus oder einem Finger. Enter beendet den Zug.</p>
+            <details class="help" open>
+              <summary>Steuerung</summary>
+              <table>
+                <tr><td>Kuh wählen</td><td>Klick auf die Kuh, Tasten 1–6, Tab + Eingabe</td></tr>
+                <tr><td>Laufen / Springen</td><td>W A S D (relativ zur Kamera) / Leertaste</td></tr>
+                <tr><td>Kamera und Zielrichtung</td><td>rechte Maustaste ziehen, Q E oder ← →, am Handy ein Finger</td></tr>
+                <tr><td>Neigung</td><td>↑ ↓ oder Regler</td></tr>
+                <tr><td>Waffe</td><td>1–9, 0 oder Klick in der Waffenleiste</td></tr>
+                <tr><td>Kraft und Feuer</td><td>linke Maustaste oder F halten, loslassen; am Handy Feuerknopf halten</td></tr>
+                <tr><td>Zünder Milchkanne</td><td>T oder Regler</td></tr>
+                <tr><td>Übersicht / Zug beenden</td><td>M / Eingabe</td></tr>
+              </table>
+              <p class="hint">Die gestrichelte Linie zeigt nur den Anfang der Flugbahn und rechnet den Wind nicht mit. Der Windpfeil oben zeigt die Richtung relativ zur Kamera.</p>
+            </details>
           </div>
           <div id="chat-slot-game"></div>
         </div>

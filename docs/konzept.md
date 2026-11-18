@@ -1,6 +1,6 @@
 # Hinterkühe – Spielkonzept
 
-Stand: 18.11.2026, Version 0.2 (Entwurf, ersetzt das 2D-Konzept 0.1)
+Stand: 18.11.2026, Version 0.4 (spielbar; ersetzt das 2D-Konzept 0.1)
 
 Hinterkühe ist ein rundenbasiertes **3D-Taktikspiel** für den Browser. Rivalisierende Höfe schicken ihre Kühe auf die Hinterweide, um sie für sich zu gewinnen. Wer am Zug ist, wählt eine seiner Kühe, läuft mit ihr über das Gelände, solange die Ausdauer reicht, und setzt dann eine Aktion ein: schießen, werfen, heilen, Minen legen. Kühe sammeln Erfahrung und werden in eigene Laufbahnen befördert. Gespielt wird online mit Freunden, ohne Installation und ohne Konto.
 
@@ -134,6 +134,8 @@ Jede Kuh hat die Grundwaffen. Laufbahn und Rang schalten weitere frei. Munition 
 | **Kräuterdampf** | Pflege 3 | Umkreis 8 m um sich | +20 LP für alle eigenen | – | 1 |
 | **Fernglas-Schuss** | Schleichen 2 | gerader Schuss, sehr weit | 35, bei Kopftreffer 60 | nein | 3 |
 | **Glockenköder** | Schleichen 3 | wirft eine Kuhglocke, Gegner im Umkreis drehen sich weg und verlieren 20 Ausdauer | – | ja | 2 |
+| **Kuhglocken-Ruf** | Pflege 4 | holt die zuletzt heimgegangene eigene Kuh mit 40 % LP zurück | – | – | 1 |
+| **Fernzünder** | wer einen Sprengsack gelegt hat | zündet die eigenen Sprengsäcke sofort | – | – | ∞ |
 | **Tarnung** | Schleichen 3 | für einen Zug unsichtbar, bis zur nächsten eigenen Aktion | – | – | 1 |
 | **Zug beenden** | alle | – | +20 % Ausdauer beim nächsten Zug dieser Kuh | – | ∞ |
 
@@ -297,9 +299,8 @@ docs/         dieses Konzept
 
 1. **Gerüst und Konzept** (erledigt, 0.2.0): Laufbahnen, Waffenliste und Beförderung als Daten mit Tests, Zugablauf mit freier Kuhwahl, 3D-Kartenvorschau.
 2. **Verbindung und Einstellungen** (erledigt, 0.3.0): PeerJS und `?local`, Räume mit Passwort, Einladungslink, Lobby mit Höfen, Chat, Einstellungsformular, Züge über den Host. Grundlage: `spiel-technik-und-optionen.md`. Details in Kap. 11.
-3. **Spielbarer Prototyp für 2 Spieler:** Kuh wählen, laufen mit Ausdauer, zielen, Milchkanne und Heuballen-Schleuder, Krater, Schaden, Rundenende. Auch am selben Gerät spielbar.
-4. **Laufbahnen im Spiel:** Erfahrung, Beförderung, alle Waffen, Bunker.
-5. **Ausbau:** Kisten, Hochwasser, Kartenthemen, Ton, Handy-Steuerung, Rangliste.
+3. **Spielbares Spiel** (erledigt, 0.4.0): Zielen mit Kamera, Neigung und Kraft, Geschossflug mit Schwerkraft und Wind, Krater in der Höhenkarte, Schaden mit Abfall, Rückstoß, Fallschaden, Rutschen, Wasser. Alle Waffen aus Kap. 5, Erfahrung und Beförderung, Bunker mit Scharte und Einsturz, Minen, Sprengsäcke, Zäune, Kisten, Hochwasser, fünf Kartenthemen, Sieg und Rundenende, Ton und Effekte ohne Dateien, Namensschilder, Zielhilfe. Online synchron und am selben Gerät spielbar. Details in Kap. 18.
+4. **Ausbau:** Rangliste über Sitzungen, Handy-Daumenstick, Nebel des Krieges.
 6. **Später:** Computergegner, Feldzug, Karteneditor.
 
 ## 17. Offene Fragen
@@ -309,3 +310,23 @@ docs/         dieses Konzept
 - **Erfahrung im Gefecht behalten?** Jetzt: nein, nur im Feldzug.
 - **Nebel des Krieges** als Option?
 - **Hochformat am Handy** unterstützen oder Querformat erzwingen?
+
+## 18. Umsetzung des Spiels (0.4.0)
+
+| Teil | Datei | Was |
+|---|---|---|
+| Spiellogik und Physik | `src/game/game.ts` | Zug, Aktionen, Geschosse (60 Hz, Unterschritte von 0,3 m), Explosionen, Kühe in der Luft, Minen, Kisten, Hochwasser, Schnappschuss |
+| Waffen | `src/game/weapons.ts` | Werte je Waffe: Art, Schaden, Radius, Krater, Rückstoß, Geschwindigkeit, Reichweite |
+| Kartenthemen | `src/game/terrain.ts` | Alm, Moor (Schlamm), Kornfeld, Steinbruch (Terrassen, kleinere Krater), Winterweide (rutschig) |
+| Zielhilfe | `src/game/predict.ts` | erste 0,75 s der Flugbahn ohne Wind, Zielring, Ablageort |
+| Anzeige | `src/ui/scene3d.ts` | Geschosse, Krater, Bunker, Zäune, Minen (nur eigene sichtbar), Kisten am Fallschirm, Partikel, Namensschilder |
+| Ton | `src/ui/audio.ts` | Web Audio ohne Dateien |
+
+**Regeln im Detail:**
+
+- **Zielen:** Richtung = Blickrichtung der Kamera, Neigung −20° bis 85°, Kraft durch Halten (1,5 s bis voll). Gerade Schüsse brauchen keine Kraft.
+- **Schaden** fällt vom Mittelpunkt linear auf 0 am Rand ab. Rückstoß wirft Kühe; Sturz über 4 m kostet 5 LP pro Meter. Wasser oder Kartenrand: die Kuh geht heim.
+- **Bunker** schützen gegen alles außer geraden Schüssen durch die Scharte, Sprengsäcke und Explosionen im Inneren. Sie nehmen 60 % des Schadens (Sprengsack 350 %), bei 0 LP stürzen sie ein (30 Schaden an allen darin).
+- **Ein Zug endet** nach der Aktion, sobald nichts mehr fliegt oder rollt (0,9 s Ruhe). Tarnung ist die Ausnahme: danach darf man noch laufen.
+- **Netz:** Neue Befehle `fire` (mit Zünder) und `jump`, Zustand `aim` (höchstens alle 100 ms) für die Zielanzeige der Zuschauer. Ereignisse (Explosion, Platschen …) gehen nummeriert im Schnappschuss mit, jedes Gerät spielt nur neue ab. Protokollversion 2.
+- **Am selben Gerät:** Startseite „Hier zusammen spielen“, 2–4 Höfe wechseln sich an einem Gerät ab, ohne Netz.
