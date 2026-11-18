@@ -14,7 +14,7 @@ import { BRANCHES, type Branch } from '../game/careers';
 import type { Snapshot } from '../game/types';
 
 /** Protokollversion. Mitspieler mit anderer Version werden abgewiesen. */
-export const PROTOCOL = 1;
+export const PROTOCOL = 2;
 
 export interface LobbyPlayer {
   id: string;
@@ -30,8 +30,9 @@ export interface LobbyPlayer {
 export type Command =
   | { k: 'select'; cow: string }
   | { k: 'branch'; cow: string; branch: Branch }
-  /** Aktion auslösen. Im Prototyp beendet sie den Zug (Geschossflug folgt in Schritt 3). */
-  | { k: 'fire'; weapon: string; aim: number; pitch: number; power: number }
+  /** Aktion auslösen: Richtung und Neigung in Grad, Kraft 0–1, Zünder in s (Milchkanne). */
+  | { k: 'fire'; weapon: string; aim: number; pitch: number; power: number; fuse: number }
+  | { k: 'jump' }
   | { k: 'end' };
 
 export interface ChatLine {
@@ -47,6 +48,8 @@ export type ClientMessage =
   | { t: 'cmd'; seq: number; cmd: Command }
   /** Laufrichtung als Zustand: [x, z] in Weltkoordinaten, je −1 bis 1, [0, 0] = stehen. */
   | { t: 'walk'; dir: [number, number] }
+  /** Zielen als Zustand, nur zur Anzeige für die anderen: Richtung, Neigung (Grad), Waffe. */
+  | { t: 'aim'; yaw: number; pitch: number; weapon: string }
   | { t: 'team'; team: number }
   | { t: 'chat'; text: string }
   | { t: 'rename'; name: string };
@@ -109,6 +112,10 @@ export function parseClientMessage(raw: unknown): ClientMessage | null {
       const c = (v: number) => Math.round(Math.max(-1, Math.min(1, v)) * 100) / 100;
       return { t: 'walk', dir: [c(d[0] as number), c(d[1] as number)] };
     }
+    case 'aim':
+      return num(m.yaw) && num(m.pitch) && typeof m.weapon === 'string'
+        ? { t: 'aim', yaw: m.yaw as number, pitch: m.pitch as number, weapon: m.weapon.slice(0, 20) }
+        : null;
     case 'team':
       return num(m.team) ? { t: 'team', team: m.team as number } : null;
     case 'chat':
@@ -123,6 +130,7 @@ export function parseClientMessage(raw: unknown): ClientMessage | null {
       if (c.k === 'branch' && typeof c.cow === 'string' && (BRANCHES as readonly string[]).includes(c.branch as string))
         return { t: 'cmd', seq, cmd: { k: 'branch', cow: c.cow, branch: c.branch as Branch } };
       if (c.k === 'end') return { t: 'cmd', seq, cmd: { k: 'end' } };
+      if (c.k === 'jump') return { t: 'cmd', seq, cmd: { k: 'jump' } };
       if (c.k === 'fire' && typeof c.weapon === 'string' && num(c.aim) && num(c.pitch) && num(c.power))
         return {
           t: 'cmd',
@@ -133,6 +141,7 @@ export function parseClientMessage(raw: unknown): ClientMessage | null {
             aim: c.aim as number,
             pitch: c.pitch as number,
             power: Math.max(0, Math.min(1, c.power as number)),
+            fuse: num(c.fuse) ? Math.max(1, Math.min(5, Math.round(c.fuse as number))) : 3,
           },
         };
       return null;

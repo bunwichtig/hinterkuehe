@@ -20,4 +20,4 @@ export const STORAGE_PREFIX = 'hk-';
 export const CHANNEL_PREFIX = 'hk-';
 
 /** Spielversion (Schema 1.x.y wie in der Technik-Vorlage, vor 1.0 noch 0.x). */
-export const VERSION = '0.3.0';
+export const VERSION = '0.4.0';

@@ -10,7 +10,83 @@ export interface Terrain {
   size: number;
   cell: number;
   heights: Float32Array;
+  theme: Theme;
 }
+
+/** Kartenthemen, siehe docs/konzept.md, Kap. 7. */
+export type Theme = 'alm' | 'moor' | 'kornfeld' | 'steinbruch' | 'winterweide';
+
+export interface ThemeInfo {
+  label: string;
+  /** Höhenunterschied in Metern. */
+  relief: number;
+  /** Grundhöhe: kleiner = mehr Wasserlöcher. */
+  base: number;
+  /** Stufenhöhe für Terrassen (0 = keine). */
+  terrace: number;
+  /** Faktor auf Kratergrößen (Fels bekommt kleinere Krater). */
+  crater: number;
+  /** Rutschen nach dem Landen: Anteil der Geschwindigkeit, der pro Schritt bleibt. */
+  slide: number;
+  /** Tief liegender Boden ist Schlamm und kostet doppelte Ausdauer. */
+  mud: boolean;
+  colors: { low: string; mid: string; high: string; steep: string; shore: string; sky: string; water: string };
+}
+
+export const THEMES: Record<Theme, ThemeInfo> = {
+  alm: {
+    label: 'Alm',
+    relief: 9,
+    base: 1.5,
+    terrace: 0,
+    crater: 1,
+    slide: 0.8,
+    mud: false,
+    colors: { low: '#6fae45', mid: '#9cc95a', high: '#b9d77a', steep: '#8a7f72', shore: '#d9c38a', sky: '#9fd3ef', water: '#3d8fc4' },
+  },
+  moor: {
+    label: 'Moor',
+    relief: 5,
+    base: 0.7,
+    terrace: 0,
+    crater: 1.1,
+    slide: 0.75,
+    mud: true,
+    colors: { low: '#5d6b34', mid: '#7a8a44', high: '#93a35a', steep: '#6b5a44', shore: '#4f4230', sky: '#b7c4b0', water: '#4d6a55' },
+  },
+  kornfeld: {
+    label: 'Kornfeld',
+    relief: 3.5,
+    base: 1.8,
+    terrace: 0,
+    crater: 1,
+    slide: 0.8,
+    mud: false,
+    colors: { low: '#c9b04a', mid: '#e3c95e', high: '#efd77a', steep: '#a08a52', shore: '#d9c38a', sky: '#a9dcf5', water: '#3d8fc4' },
+  },
+  steinbruch: {
+    label: 'Steinbruch',
+    relief: 13,
+    base: 1.6,
+    terrace: 2.2,
+    crater: 0.65,
+    slide: 0.8,
+    mud: false,
+    colors: { low: '#8d8a6a', mid: '#a7a28c', high: '#c4beaa', steep: '#77706a', shore: '#bdb59a', sky: '#c3d6e0', water: '#4a83a8' },
+  },
+  winterweide: {
+    label: 'Winterweide',
+    relief: 8,
+    base: 1.4,
+    terrace: 0,
+    crater: 1,
+    slide: 0.97,
+    mud: false,
+    colors: { low: '#e6eef2', mid: '#f4f8fb', high: '#ffffff', steep: '#9aa7b0', shore: '#cfe3ee', sky: '#cfe0ea', water: '#7fb3d1' },
+  },
+};
+
+export const THEME_NAMES = Object.keys(THEMES) as Theme[];
 
 export const WATER_LEVEL = 0;
 
@@ -50,9 +126,11 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 /**
  * Erzeugt eine Insel: Hügel in der Mitte, zum Rand hin abfallend ins Wasser.
- * @param relief  Höhenunterschied in Metern
+ * Das Thema bestimmt Höhenunterschied, Wasserlöcher und Terrassen.
  */
-export function generateTerrain(seed: number, size = 96, cell = 1, relief = 9): Terrain {
+export function generateTerrain(seed: number, theme: Theme = 'alm', size = 96, cell = 1): Terrain {
+  const info = THEMES[theme] ?? THEMES.alm;
+  const { relief, base, terrace } = info;
   const rng = createRng(seed);
   const noise = valueNoise(rng, size, 4);
   const heights = new Float32Array(size * size);
@@ -63,11 +141,17 @@ export function generateTerrain(seed: number, size = 96, cell = 1, relief = 9): 
       const dz = (z - c) / c;
       const edge = Math.min(1, Math.sqrt(dx * dx + dz * dz));
       const falloff = 1 - smooth(Math.max(0, (edge - 0.6) / 0.4));
-      const h = (noise[z * size + x]! - 0.35) * relief * 1.6 + 1.5;
+      let h = (noise[z * size + x]! - 0.35) * relief * 1.6 + base;
+      if (terrace > 0 && h > 0.5) {
+        // Terrassen: flache Stufen mit steilen Kanten.
+        const f = h / terrace;
+        const fl = Math.floor(f);
+        h = (fl + smooth(Math.max(0, (f - fl - 0.75) / 0.25))) * terrace;
+      }
       heights[z * size + x] = lerp(-3, h, falloff);
     }
   }
-  return { size, cell, heights };
+  return { size, cell, heights, theme };
 }
 
 /** Bodenhöhe an einer beliebigen Stelle (bilinear interpoliert). */
@@ -78,6 +162,17 @@ export function heightAt(t: Terrain, x: number, z: number): number {
   const z0 = Math.floor(gz);
   const h = (ix: number, iz: number) => t.heights[iz * t.size + ix]!;
   return lerp(lerp(h(x0, z0), h(x0 + 1, z0), gx - x0), lerp(h(x0, z0 + 1), h(x0 + 1, z0 + 1), gx - x0), gz - z0);
+}
+
+/** Kantenlänge der Karte in Metern. */
+export function spanOf(t: Terrain): number {
+  return (t.size - 1) * t.cell;
+}
+
+/** Liegt der Punkt auf der Karte (nicht außerhalb des Rasters)? */
+export function inside(t: Terrain, x: number, z: number): boolean {
+  const s = spanOf(t);
+  return x >= 0 && z >= 0 && x <= s && z <= s;
 }
 
 /** Drückt einen Krater (Kugel mit Mittelpunkt x/y/z, Radius r) in die Höhenkarte. */

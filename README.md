@@ -3,7 +3,7 @@
 Rundenbasiertes 3D-Taktikspiel im Browser: Höfe schicken ihre Kühe auf die Hinterweide. Pro Zug eine Kuh wählen, mit der Ausdauer laufen, dann schießen, werfen, heilen oder Minen legen. Kühe sammeln Erfahrung und werden in vier Laufbahnen befördert. Online mit Freunden, ohne Installation und ohne eigenen Server.
 
 - **Spielkonzept:** [docs/konzept.md](docs/konzept.md)
-- **Stand:** Version 0.3.0: Online-Verbindung, Lobby mit Höfen, Einstellungen, Chat und Einladungslink. Züge laufen über den Host (Kuh wählen, laufen, Zug beenden). Zielen, Geschossflug und Schaden folgen mit dem spielbaren Prototyp.
+- **Stand:** Version 0.4.0: voll spielbar. Online (PeerJS, Lobby, Chat, Einladungslink) oder am selben Gerät. Zielen mit Neigung und Kraft, Wind, Krater, Schaden, Rückstoß, alle 19 Waffen und Hilfsmittel, Beförderung in vier Laufbahnen, Bunker, Minen, Zäune, Kisten, Hochwasser, fünf Kartenthemen, Ton und Effekte.
 
 ## Loslegen
 

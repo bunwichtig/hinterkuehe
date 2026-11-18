@@ -336,3 +336,277 @@ label.check {
 .pad button {
   padding: 0;
 }
+
+/* ───────── Spiel: Ansicht, Schilder, Effekte ───────── */
+
+.view-slot {
+  position: relative;
+}
+
+.labels {
+  position: absolute;
+  inset: 0 auto auto 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.labels > div {
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
+  will-change: transform;
+}
+
+.cow-label {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-shadow: 0 1px 2px #000;
+}
+
+.cow-label .hp {
+  display: block;
+  width: 44px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgb(0 0 0 / 0.5);
+  overflow: hidden;
+  border: 1px solid var(--team);
+}
+
+.cow-label .hp i {
+  display: block;
+  height: 100%;
+  background: var(--team);
+}
+
+.cow-label.active .n {
+  color: #ffe066;
+}
+
+.float {
+  font-weight: 800;
+  font-size: 1.1rem;
+  text-shadow: 0 1px 3px #000;
+}
+
+.float.dmg {
+  color: #ff6b5a;
+}
+
+.float.heal {
+  color: #7cff8a;
+}
+
+.float.promo {
+  color: #ffe066;
+  font-size: 1.3rem;
+}
+
+.float.home {
+  color: #f3efe0;
+}
+
+.banner {
+  display: grid;
+  gap: 4px;
+  font-size: clamp(1.1rem, 3.5vw, 1.8rem);
+  font-weight: 800;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 2px solid var(--team);
+  background: color-mix(in srgb, var(--team) 35%, rgb(0 0 0 / 0.5));
+}
+
+.banner small {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.warn {
+  color: #ff8a6b;
+}
+
+/* ───────── Zugbereich ───────── */
+
+.cowcard {
+  display: grid;
+  gap: 4px;
+}
+
+.cowcard .rank {
+  font-size: 0.85rem;
+}
+
+.cowcard .xp {
+  color: var(--muted);
+}
+
+.bars {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.meter {
+  position: relative;
+  height: 20px;
+  border-radius: 6px;
+  background: #1a251b;
+  overflow: hidden;
+  font-size: 0.78rem;
+}
+
+.meter i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: #4c9a2a;
+}
+
+.meter.st i {
+  background: #2e86ab;
+}
+
+.meter span {
+  position: relative;
+  padding-left: 8px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+.weapons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.weapon {
+  padding: 6px 10px;
+  background: #1a251b;
+  color: var(--text);
+  border: 1px solid #44593f;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.weapon.on {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 25%, #1a251b);
+}
+
+.weapon em {
+  color: var(--muted);
+  font-style: normal;
+}
+
+.weapon .ico {
+  margin: 0 4px;
+}
+
+kbd {
+  display: inline-block;
+  min-width: 1.2em;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: rgb(255 255 255 / 0.12);
+  font: 600 0.75rem/1.5 ui-monospace, monospace;
+  text-align: center;
+}
+
+.aim {
+  align-items: end;
+}
+
+.aim label {
+  min-width: 180px;
+}
+
+.with-out {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.with-out input {
+  flex: 1;
+}
+
+.power {
+  position: relative;
+  flex: 1;
+  min-width: 160px;
+  height: 28px;
+  border-radius: 8px;
+  background: #1a251b;
+  overflow: hidden;
+  border: 1px solid #44593f;
+}
+
+.power i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  background: linear-gradient(90deg, #f2a541, #d64933);
+}
+
+.power span {
+  position: relative;
+  padding-left: 10px;
+  line-height: 28px;
+  font-weight: 600;
+}
+
+button.fire {
+  background: #d64933;
+  color: #fff;
+  touch-action: none;
+  user-select: none;
+}
+
+.branches button {
+  display: grid;
+  text-align: left;
+  max-width: 220px;
+}
+
+.branches small {
+  font-weight: 400;
+}
+
+.hotseat {
+  align-items: end;
+}
+
+label.inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.help table {
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.help td {
+  padding: 2px 8px 2px 0;
+  vertical-align: top;
+}
+
+.help td:first-child {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .bars {
+    grid-template-columns: 1fr;
+  }
+
+  .help td:first-child {
+    white-space: normal;
+  }
+}
